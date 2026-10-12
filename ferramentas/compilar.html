@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compilar imagem-alvo · Cartão RA GTech</title>
+  <link rel="stylesheet" href="../css/ferramentas.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="marca">GTech <span>RA</span></div>
+    <h1>Compilador da imagem-alvo</h1>
+    <p>Transforma a arte da frente do cartão no arquivo <code>targets.mind</code>, que o app usa para reconhecer o cartão pela câmera.</p>
+  </header>
+
+  <main class="conteudo">
+    <section class="painel">
+      <h2><span class="passo">1</span>Escolha a imagem</h2>
+      <p>Use a arte da <b>frente</b> do cartão (PNG ou JPG). Imagens com bastante detalhe e contraste são reconhecidas com mais facilidade.</p>
+      <div class="botoes">
+        <input type="file" id="arquivo" accept="image/png,image/jpeg,image/webp">
+        <button class="btn sec" id="btnPadrao" type="button">Usar a arte padrão</button>
+      </div>
+    </section>
+
+    <section class="painel">
+      <h2><span class="passo">2</span>Compile</h2>
+      <p>Depois de compilar, os círculos mostram os <b>pontos de interesse</b> que o MindAR usa para <b>encontrar</b> o cartão (vermelho/azul) e os pontos verdes que ele usa para <b>seguir</b> o cartão quando você se move.</p>
+      <canvas id="preview" class="preview" width="1000" height="647"></canvas>
+      <div class="barra"><div id="progresso"></div></div>
+      <small id="status">Nenhuma imagem selecionada.</small>
+      <div class="metricas oculto" id="metricas">
+        <div class="metrica"><small>Pontos de detecção</small><b id="mDeteccao">–</b></div>
+        <div class="metrica"><small>Pontos de rastreamento</small><b id="mRastreio">–</b></div>
+        <div class="metrica"><small>Avaliação</small><b id="mAvaliacao">–</b></div>
+      </div>
+      <div class="botoes" style="margin-top:14px">
+        <button class="btn" id="btnCompilar" type="button" disabled>Compilar</button>
+      </div>
+    </section>
+
+    <section class="painel">
+      <h2><span class="passo">3</span>Baixe e substitua no projeto</h2>
+      <p>Coloque o arquivo baixado em <code>assets/targets.mind</code> (substituindo o antigo). Se você trocou a arte do cartão, salve também a imagem como <code>assets/cartao-frente.png</code> — ela é usada na página de impressão.</p>
+      <button class="btn ok" id="btnBaixar" type="button" disabled>Baixar targets.mind</button>
+    </section>
+  </main>
+
+  <script type="module">
+    import { Compiler } from '../libs/mindar/mindar-image.prod.js';
+
+    const LARGURA_MAX = 1000; // imagens maiores são reduzidas (compila mais rápido e o resultado é o mesmo na prática)
+    const $ = (id) => document.getElementById(id);
+    const canvas = $('preview');
+    const ctx = canvas.getContext('2d');
+    let imagemAtual = null;
+    let arquivoMind = null;
+
+    function setStatus(txt, pct) {
+      $('status').textContent = txt;
+      if (pct !== undefined) $('progresso').style.width = Math.max(0, Math.min(100, pct)) + '%';
+    }
+
+    function carregarImagem(src) {
+      return new Promise((ok, erro) => {
+        const img = new Image();
+        img.onload = () => ok(img);
+        img.onerror = () => erro(new Error('Não foi possível abrir a imagem.'));
+        img.src = src;
+      });
+    }
+
+    // Reduz para no máximo LARGURA_MAX e devolve um <canvas> (aceito pelo compilador)
+    function prepararImagem(img) {
+      const escala = Math.min(1, LARGURA_MAX / img.naturalWidth);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.naturalWidth * escala);
+      c.height = Math.round(img.naturalHeight * escala);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      return c;
+    }
+
+    function mostrarImagem(c) {
+      canvas.width = c.width;
+      canvas.height = c.height;
+      ctx.drawImage(c, 0, 0);
+    }
+
+    async function selecionar(src, nome) {
+      try {
+        const img = await carregarImagem(src);
+        imagemAtual = prepararImagem(img);
+        mostrarImagem(imagemAtual);
+        arquivoMind = null;
+        $('btnBaixar').disabled = true;
+        $('btnCompilar').disabled = false;
+        $('metricas').classList.add('oculto');
+        setStatus(`Imagem pronta: ${nome} (${imagemAtual.width}×${imagemAtual.height}px). Clique em Compilar.`, 0);
+      } catch (e) {
+        setStatus(e.message, 0);
+      }
+    }
+
+    // Heurística simples: quantidade de pontos para detectar (encontrar) e para rastrear (seguir) o cartão
+    function avaliar(deteccao, rastreio) {
+      if (rastreio >= 90 && deteccao >= 1500) return 'Ótima';
+      if (rastreio >= 45 && deteccao >= 600) return 'Boa';
+      return 'Fraca – use uma arte com mais detalhes';
+    }
+
+    async function compilar() {
+      if (!imagemAtual) return null;
+      $('btnCompilar').disabled = true;
+      setStatus('Compilando… isso leva de alguns segundos a 1 minuto.', 1);
+      const compiler = new Compiler();
+      const dados = await compiler.compileImageTargets([imagemAtual], (p) => setStatus(`Compilando… ${p.toFixed(0)}%`, p));
+      const buffer = await compiler.exportData();
+      arquivoMind = new Blob([buffer], { type: 'application/octet-stream' });
+
+      // Desenha os pontos de interesse de todas as escalas (convertidos para o tamanho da imagem)
+      const alvo = dados[0];
+      mostrarImagem(imagemAtual);
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 1.5;
+      for (const nivel of alvo.matchingData) {
+        const fator = canvas.width / nivel.width;
+        const raio = Math.max(2.5, 1.8 * fator);
+        for (const [pts, cor] of [[nivel.maximaPoints, 'rgba(225,29,72,.75)'], [nivel.minimaPoints, 'rgba(37,99,235,.75)']]) {
+          ctx.strokeStyle = cor;
+          for (const p of pts) { ctx.beginPath(); ctx.arc(p.x * fator, p.y * fator, raio, 0, Math.PI * 2); ctx.stroke(); }
+        }
+      }
+      // Pontos de rastreamento (verde)
+      ctx.fillStyle = '#16A34A';
+      for (const t of alvo.trackingData) {
+        const fator = canvas.width / t.width;
+        for (const p of t.points) { ctx.beginPath(); ctx.arc(p.x * fator, p.y * fator, 5, 0, Math.PI * 2); ctx.fill(); }
+      }
+
+      const totalDeteccao = alvo.matchingData.reduce((s, m) => s + m.maximaPoints.length + m.minimaPoints.length, 0);
+      const totalRastreio = alvo.trackingData.reduce((s, t) => s + t.points.length, 0);
+      $('mDeteccao').textContent = totalDeteccao;
+      $('mRastreio').textContent = totalRastreio;
+      $('mAvaliacao').textContent = avaliar(totalDeteccao, totalRastreio);
+      $('metricas').classList.remove('oculto');
+      $('btnBaixar').disabled = false;
+      $('btnCompilar').disabled = false;
+      setStatus(`Pronto! ${(buffer.byteLength / 1024).toFixed(0)} KB. Agora baixe o arquivo targets.mind.`, 100);
+      return { buffer, totalDeteccao, totalRastreio };
+    }
+
+    $('arquivo').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (f) selecionar(URL.createObjectURL(f), f.name);
+    });
+    $('btnPadrao').addEventListener('click', () => selecionar('../assets/cartao-frente.png', 'cartao-frente.png'));
+    $('btnCompilar').addEventListener('click', () => compilar().catch((e) => { setStatus('Erro ao compilar: ' + e.message, 0); $('btnCompilar').disabled = false; }));
+    $('btnBaixar').addEventListener('click', () => {
+      if (!arquivoMind) return;
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(arquivoMind);
+      a.download = 'targets.mind';
+      a.click();
+    });
+
+    // Gancho para automação/testes: compila uma URL e devolve o arquivo em base64
+    window.__compilarDe = async (url) => {
+      await selecionar(url, url);
+      const r = await compilar();
+      let bin = '';
+      const bytes = new Uint8Array(r.buffer);
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      return { base64: btoa(bin), totalDeteccao: r.totalDeteccao, totalRastreio: r.totalRastreio };
+    };
+  </script>
+</body>
+</html>

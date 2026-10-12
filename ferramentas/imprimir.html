@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Imprimir cartão · Cartão RA GTech</title>
+  <link rel="stylesheet" href="../css/ferramentas.css">
+  <style>
+    /* ---------- Páginas para impressão ---------- */
+    @page { size: A4; margin: 0; }
+    @page grande { size: A4 landscape; margin: 0; }
+
+    .paginas { display: grid; justify-content: center; gap: 24px; padding: 8px 0 40px; }
+    .pagina {
+      position: relative; background: #fff; overflow: hidden;
+      box-shadow: 0 10px 40px rgba(15, 23, 42, .18);
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    .a4 { width: 210mm; height: 297mm; }
+    .a4-paisagem { width: 297mm; height: 210mm; page: grande; }
+    .rotulo-pagina { font: 600 13px Poppins, sans-serif; color: #475569; margin: 0 0 6px; }
+
+    .grade {
+      position: absolute; left: 20mm; top: 11mm;
+      display: grid; grid-template-columns: repeat(2, 85mm); grid-auto-rows: 55mm;
+    }
+    .cartao { width: 85mm; height: 55mm; display: block; }
+    img.cartao { object-fit: cover; }
+
+    .marca-corte { position: absolute; background: #64748B; }
+    .marca-corte.v { width: .2mm; height: 6mm; }
+    .marca-corte.h { height: .2mm; width: 6mm; }
+
+    /* Verso */
+    .verso {
+      position: relative; overflow: hidden; color: #fff;
+      background:
+        radial-gradient(60mm 40mm at 100% 0%, rgba(34, 211, 238, .28), transparent 70%),
+        linear-gradient(150deg, #0E2550, #040B1C 70%);
+      display: grid; grid-template-columns: 30mm 1fr; gap: 4mm; align-items: center; padding: 5mm;
+      font-family: Poppins, sans-serif;
+    }
+    .verso .qr { background: #fff; border-radius: 2.5mm; padding: 2mm; width: 30mm; height: 30mm; }
+    .verso .qr svg { width: 100%; height: 100%; display: block; }
+    .verso .qr-legenda { font-size: 4.6pt; text-align: center; color: #A5F3FC; margin-top: 1.2mm; letter-spacing: .04em; }
+    .verso .marca-verso { font-weight: 800; font-size: 11pt; line-height: 1; display: flex; align-items: center; gap: 1.5mm; }
+    .verso .marca-verso span { font-size: 5.5pt; background: #22D3EE; color: #071226; border-radius: 1mm; padding: .3mm 1mm; }
+    .verso .chamada { font-size: 5.6pt; line-height: 1.35; color: #CBD5E1; margin: 1.6mm 0 2.2mm; }
+    .verso .chamada b { color: #fff; }
+    .verso ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1mm; }
+    .verso li { display: flex; align-items: center; gap: 1.6mm; font-size: 5.6pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .verso li svg { width: 3.2mm; height: 3.2mm; flex: none; color: #22D3EE; }
+    .verso .faixa { position: absolute; left: 0; right: 0; bottom: 0; height: 1.2mm; background: linear-gradient(90deg, #22D3EE, #2563EB); }
+
+    /* Cartão grande */
+    .grande-box { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6mm; }
+    .grande-box img { width: 250mm; height: calc(250mm * 55 / 85); display: block; }
+    .grande-box p { margin: 0; font: 500 10pt Poppins, sans-serif; color: #64748B; }
+
+    .opcoes { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 10px 0 14px; }
+    .opcoes label { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+
+    @media print {
+      body { background: #fff; }
+      .topo, .conteudo, .rotulo-pagina { display: none !important; }
+      .paginas { display: block; padding: 0; gap: 0; }
+      .pagina { box-shadow: none; zoom: 1 !important; }
+      .bloco + .bloco { break-before: page; }
+      .bloco.nao-imprimir-pagina { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topo nao-imprimir">
+    <div class="marca">GTech <span>RA</span></div>
+    <h1>Imprimir o cartão</h1>
+    <p>Frente (marcador da Realidade Aumentada), verso com QR code do app e uma versão grande para gravar o vídeo.</p>
+  </header>
+
+  <main class="conteudo nao-imprimir">
+    <section class="painel">
+      <h2><span class="passo">1</span>Endereço do app para o QR code</h2>
+      <p>Use o link público do app (por exemplo, o do GitHub Pages). Quem escanear o QR abre o app direto no celular.</p>
+      <label class="campo" for="url">Link do app</label>
+      <input id="url" type="url" placeholder="https://seu-usuario.github.io/cartao-ra-gtech/">
+      <div id="avisoUrl" class="aviso erro oculto" style="margin-top:10px">Este endereço é local (não funciona no celular de outras pessoas). Publique o app e cole aqui o link público.</div>
+    </section>
+
+    <section class="painel">
+      <h2><span class="passo">2</span>Escolha o que imprimir</h2>
+      <div class="opcoes">
+        <label><input type="checkbox" id="chkFrente" checked> Frentes (10 por folha)</label>
+        <label><input type="checkbox" id="chkVerso" checked> Versos com QR (10 por folha)</label>
+        <label><input type="checkbox" id="chkGrande" checked> Cartão grande (A4 deitado)</label>
+      </div>
+      <p>Na janela de impressão use <b>Escala 100% / Tamanho real</b>, <b>Margens: nenhuma</b> e marque <b>Gráficos de fundo</b>. Papel mais grosso (180 g ou mais) deixa o cartão firme e com menos reflexo.</p>
+      <div class="botoes"><button class="btn" id="btnImprimir" type="button">Imprimir</button></div>
+    </section>
+  </main>
+
+  <div class="paginas" id="paginas">
+    <div class="bloco" id="blocoFrente">
+      <p class="rotulo-pagina nao-imprimir">Folha 1 — Frentes (marcador de RA)</p>
+      <section class="pagina a4" id="pgFrente"><div class="grade" id="gradeFrente"></div></section>
+    </div>
+    <div class="bloco" id="blocoVerso">
+      <p class="rotulo-pagina nao-imprimir">Folha 2 — Versos com QR code</p>
+      <section class="pagina a4" id="pgVerso"><div class="grade" id="gradeVerso"></div></section>
+    </div>
+    <div class="bloco" id="blocoGrande">
+      <p class="rotulo-pagina nao-imprimir">Folha 3 — Cartão grande (mais fácil de reconhecer no vídeo)</p>
+      <section class="pagina a4-paisagem" id="pgGrande">
+        <div class="grande-box">
+          <img src="../assets/cartao-frente.png" alt="Frente do cartão em tamanho grande">
+          <p>Aponte a câmera do celular para esta imagem</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="../libs/qrcode/qrcode.js"></script>
+  <script type="module">
+    import { CONFIG } from '../config.js';
+    import { svgIcone } from '../js/icones.js';
+
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    // ---------- Frentes ----------
+    for (let i = 0; i < 10; i++) {
+      const img = document.createElement('img');
+      img.className = 'cartao';
+      img.src = '../assets/cartao-frente.png';
+      img.alt = '';
+      $('gradeFrente').appendChild(img);
+    }
+
+    // ---------- Marcas de corte ----------
+    function marcas(pagina) {
+      const xs = [20, 105, 190], ys = [11, 66, 121, 176, 231, 286];
+      for (const x of xs) for (const [y0] of [[3], [288]]) addMarca(pagina, 'v', x - 0.1, y0);
+      for (const y of ys) for (const x0 of [12, 192]) addMarca(pagina, 'h', x0, y - 0.1);
+    }
+    function addMarca(pagina, tipo, x, y) {
+      const d = document.createElement('i');
+      d.className = 'marca-corte ' + tipo;
+      d.style.left = x + 'mm';
+      d.style.top = y + 'mm';
+      pagina.appendChild(d);
+    }
+    marcas($('pgFrente'));
+    marcas($('pgVerso'));
+
+    // ---------- Versos ----------
+    function formatarTelefone(digitos) {
+      let d = String(digitos || '').replace(/\D/g, '');
+      if (d.startsWith('55') && d.length > 11) d = d.slice(2);
+      if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+      if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+      return d;
+    }
+    function qrSvg(texto) {
+      const qr = qrcode(0, 'M');
+      qr.addData(texto);
+      qr.make();
+      const n = qr.getModuleCount();
+      let d = '';
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c},${r}h1v1h-1z`;
+      return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${d}" fill="#071226"/></svg>`;
+    }
+    function htmlVerso(url) {
+      const contatos = [];
+      if (CONFIG.whatsapp) contatos.push(['conversa', formatarTelefone(CONFIG.whatsapp)]);
+      if (CONFIG.email) contatos.push(['email', CONFIG.email]);
+      if (CONFIG.instagram) contatos.push(['camera', '@' + String(CONFIG.instagram).replace(/^@/, '')]);
+      if (CONFIG.site) contatos.push(['globo', CONFIG.site.replace(/^https?:\/\//, '').replace(/\/$/, '')]);
+      return `
+        <div><div class="qr">${qrSvg(url)}</div><div class="qr-legenda">ESCANEIE AQUI</div></div>
+        <div>
+          <div class="marca-verso">${esc(CONFIG.marca)} <span>RA</span></div>
+          <p class="chamada"><b>1.</b> Escaneie o QR code com o celular.<br><b>2.</b> Aponte a câmera para a <b>frente</b> do cartão.</p>
+          <ul>${contatos.map(([ic, t]) => `<li>${svgIcone(ic, '')}<span>${esc(t)}</span></li>`).join('')}</ul>
+        </div>
+        <div class="faixa"></div>`;
+    }
+    function desenharVersos() {
+      const url = $('url').value.trim() || $('url').placeholder;
+      const local = /^(file:|https?:\/\/(localhost|127\.|192\.168\.|10\.))/i.test(url);
+      $('avisoUrl').classList.toggle('oculto', !local);
+      const g = $('gradeVerso');
+      g.innerHTML = '';
+      for (let i = 0; i < 10; i++) {
+        const d = document.createElement('div');
+        d.className = 'cartao verso';
+        d.innerHTML = htmlVerso(url);
+        g.appendChild(d);
+      }
+    }
+
+    // URL padrão = pasta onde o app está publicado
+    $('url').value = new URL('../', window.location.href).href;
+    $('url').addEventListener('input', desenharVersos);
+    desenharVersos();
+
+    // ---------- Seleção e zoom de visualização ----------
+    function aplicarSelecao() {
+      for (const [chk, bloco] of [['chkFrente', 'blocoFrente'], ['chkVerso', 'blocoVerso'], ['chkGrande', 'blocoGrande']]) {
+        $(bloco).classList.toggle('nao-imprimir-pagina', !$(chk).checked);
+        $(bloco).style.opacity = $(chk).checked ? 1 : 0.35;
+      }
+    }
+    ['chkFrente', 'chkVerso', 'chkGrande'].forEach((id) => $(id).addEventListener('change', aplicarSelecao));
+    aplicarSelecao();
+
+    function ajustarZoom() {
+      const mm = 96 / 25.4;
+      for (const p of document.querySelectorAll('.pagina')) {
+        const larguraPx = (p.classList.contains('a4-paisagem') ? 297 : 210) * mm;
+        p.style.zoom = Math.min(1, (window.innerWidth - 32) / larguraPx);
+      }
+    }
+    window.addEventListener('resize', ajustarZoom);
+    ajustarZoom();
+    window.addEventListener('beforeprint', () => document.querySelectorAll('.pagina').forEach((p) => { p.style.zoom = 1; }));
+    window.addEventListener('afterprint', ajustarZoom);
+
+    $('btnImprimir').addEventListener('click', () => window.print());
+  </script>
+</body>
+</html>

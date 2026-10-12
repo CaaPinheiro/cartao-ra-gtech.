@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071226">
+  <title>GTech · Cartão de Visita em Realidade Aumentada</title>
+  <meta name="description" content="Aponte a câmera para o cartão da GTech e veja serviços, portfólio e contatos em Realidade Aumentada.">
+  <meta property="og:title" content="GTech · Cartão de Visita em RA">
+  <meta property="og:description" content="Aponte a câmera para o cartão e veja serviços, portfólio e contatos em 3D.">
+  <meta property="og:image" content="assets/cartao-frente.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23071226'/%3E%3Cpath d='M45.8 20.4A18 18 0 1 0 49.9 33.6H34' fill='none' stroke='%2322D3EE' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+
+  <!-- As bibliotecas ficam na pasta libs/ (o app funciona sem depender de CDN) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three/three.module.js",
+      "three/addons/": "./libs/three/addons/",
+      "mindar-image-three": "./libs/mindar/mindar-image-three.prod.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Aqui o MindAR coloca o vídeo da câmera e o canvas 3D -->
+  <div id="ar"></div>
+
+  <!-- Tela inicial -->
+  <section id="splash" class="tela">
+    <div class="splash-conteudo">
+      <div class="splash-logo" aria-hidden="true">
+        <svg viewBox="0 0 64 64"><path d="M45.8 20.4A18 18 0 1 0 49.9 33.6H34" fill="none" stroke="url(#gs)" stroke-width="7" stroke-linecap="round"/><defs><linearGradient id="gs" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5EEBFF"/><stop offset="1" stop-color="#2F5BFF"/></linearGradient></defs></svg>
+      </div>
+      <p class="splash-marca"><span data-cfg="marca">GTech</span> · <span data-cfg="empresa">Gomes Technology Solutions</span></p>
+      <h1>Cartão de visita<br><em>em Realidade Aumentada</em></h1>
+      <p class="splash-texto">Aponte a câmera para a <b>frente do cartão</b> e veja serviços, portfólio e contatos surgirem em 3D.</p>
+      <button id="btnIniciar" class="btn-principal" type="button">Iniciar experiência</button>
+      <button id="btnVerCartao" class="btn-link" type="button">Está sem o cartão? Mostrar a imagem dele</button>
+      <ol class="splash-passos">
+        <li>Toque em <b>Iniciar</b> e permita a câmera</li>
+        <li>Aponte para o cartão (15–25 cm)</li>
+        <li>Toque nos itens em 3D</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- Interface sobre a câmera -->
+  <header id="topo" class="hud oculto">
+    <div class="topo-marca"><span class="mini-g" aria-hidden="true"></span><span class="nome-marca" data-cfg="marca">GTech</span><b>RA</b></div>
+    <div id="status" class="chip procurando"><i></i><span>Procurando cartão…</span></div>
+    <div class="topo-acoes">
+      <button id="btnCompartilhar" class="btn-icone" type="button" aria-label="Compartilhar"></button>
+      <button id="btnAjuda" class="btn-icone" type="button" aria-label="Ajuda"></button>
+    </div>
+  </header>
+
+  <div id="mira" class="hud oculto" aria-live="polite">
+    <div class="mira-moldura"><span></span><span></span><span></span><span></span><i></i></div>
+    <p>Aponte para a <b>frente</b> do cartão</p>
+  </div>
+
+  <nav id="abas" class="hud oculto" aria-label="Seções">
+    <button type="button" data-aba="servicos" class="ativa"></button>
+    <button type="button" data-aba="portfolio"></button>
+    <button type="button" data-aba="contato"></button>
+  </nav>
+
+  <!-- Painel de detalhes (abre ao tocar num item 3D) -->
+  <div id="sheetFundo" class="sheet-fundo oculto"></div>
+  <section id="sheet" class="sheet oculto" role="dialog" aria-modal="true" aria-labelledby="sheetTitulo">
+    <div class="sheet-alca"></div>
+    <div class="sheet-cabeca">
+      <div id="sheetIcone" class="sheet-icone"></div>
+      <div>
+        <h2 id="sheetTitulo"></h2>
+        <p id="sheetSubtitulo"></p>
+      </div>
+      <button id="sheetFechar" class="btn-icone claro" type="button" aria-label="Fechar"></button>
+    </div>
+    <div id="sheetCorpo" class="sheet-corpo"></div>
+    <div id="sheetAcoes" class="sheet-acoes"></div>
+  </section>
+
+  <!-- Ajuda -->
+  <section id="ajuda" class="tela modal oculto" role="dialog" aria-modal="true" aria-labelledby="ajudaTitulo">
+    <div class="modal-caixa">
+      <h2 id="ajudaTitulo">Como usar</h2>
+      <ul class="lista-dicas">
+        <li><b>Aponte</b> a câmera para a frente do cartão, a uns 15–25 cm.</li>
+        <li><b>Luz boa</b> e sem reflexo deixam o reconhecimento mais rápido.</li>
+        <li>Use as <b>abas</b> lá embaixo: Serviços, Portfólio e Contato.</li>
+        <li><b>Toque</b> nos itens 3D para ver detalhes ou falar comigo.</li>
+        <li>Sem o cartão? Abra o mesmo link no computador, toque em “Mostrar a imagem dele” e aponte o celular para a tela.</li>
+      </ul>
+      <div class="modal-botoes">
+        <a class="btn-sec" href="ferramentas/imprimir.html" target="_blank" rel="noopener">Imprimir o cartão</a>
+        <button id="ajudaFechar" class="btn-principal" type="button">Entendi</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Imagem do cartão em tela cheia (para testar apontando outro celular para a tela) -->
+  <section id="verCartao" class="tela oculto">
+    <img src="assets/cartao-frente.png" alt="Frente do cartão GTech">
+    <p>Aponte a câmera do celular para esta imagem</p>
+    <button id="verCartaoFechar" class="btn-icone" type="button" aria-label="Fechar"></button>
+  </section>
+
+  <!-- Carregando / erro -->
+  <section id="carregando" class="tela oculto">
+    <div class="spinner"></div>
+    <p id="carregandoTexto">Iniciando…</p>
+  </section>
+
+  <section id="erro" class="tela oculto" role="alert">
+    <div class="modal-caixa">
+      <h2 id="erroTitulo">Algo deu errado</h2>
+      <p id="erroTexto"></p>
+      <div class="modal-botoes">
+        <button id="erroTentar" class="btn-principal" type="button">Tentar de novo</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

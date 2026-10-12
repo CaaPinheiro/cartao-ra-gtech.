@@ -1,0 +1,2 @@
+Coloque aqui prints dos seus projetos (JPG ou PNG, de preferência 900x500 px).
+Depois informe o caminho no config.js, em portfolio -> imagem. Ex.: imagem: 'assets/portfolio/haru.jpg'
